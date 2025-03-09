@@ -8,7 +8,7 @@ import (
 func main() {
 	fmt.Println("Starting server on localhost:8000")
 	http.HandleFunc("/c", clickHttpHandler)
-	http.ListenAndServe(":8000", nil)
+	http.ListenAndServe(":10000", nil)
 
 }
 
