@@ -4,11 +4,11 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod tidy
 COPY . .
-RUN go build -o myapp .
+RUN go build -o tracker cmd/tracker/main.go
 
 # Run stage
 FROM alpine:latest
 WORKDIR /app
-COPY --from=builder /app/myapp .
-EXPOSE 8080
-CMD ["./myapp"]
+COPY --from=builder /app/tracker .
+EXPOSE 8000
+CMD ["./tracker"]

@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
+    "os"
 	"github.com/go-redis/redis/v8"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
 	// http.HandleFunc("/c", clickHttpHandler)
 	// http.ListenAndServe(":8000", nil)
+	redisUrl := os.Getenv("REDIS_ADDR")
 	redis := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     redisUrl,
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
