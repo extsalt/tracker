@@ -33,8 +33,22 @@ services:
       - redis
     environment:
       PORT: 8080
-      DB_URL: "myuser:mypass@tcp(mysql:3306)/myappdb"
+      DB_URL: "myuser:mypass@tcp(mysql:3306)/dev_db"
       REDIS_ADDR: "redis:6379"
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: mysql
+      PMA_PASSWORD: password
+    depends_on:
+      - mysql
 
 volumes:
   mysql_data:
