@@ -1,77 +1,37 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net/http"
-	"time"
-    "os"
-	"github.com/go-redis/redis/v8"
+	"os"
+
+	"database/sql"
+
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	// http.HandleFunc("/c", clickHttpHandler)
-	// http.ListenAndServe(":8000", nil)
-	redisUrl := os.Getenv("REDIS_ADDR")
-	redis := redis.NewClient(&redis.Options{
-		Addr:     redisUrl,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	defer redis.Close()
-	// create context
-
-	ctx := context.Background()
-	err := redis.Set(ctx, "key", "value", 5*time.Minute).Err()
-	if err != nil {
-		panic(err)
-	}
-	val, err := redis.Get(ctx, "key").Result()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("key", val)
+	router := gin.Default()
+	router.Handle("GET", "/click", handleClick)
+	router.Run(":80")
 }
 
-func FullURL(r *http.Request) string {
-	scheme := "http"
-	if r.TLS != nil {
-		scheme = "https"
+func handleClick(c *gin.Context) {
+	connectionStr := os.Getenv("DB_URL")
+	if connectionStr == "" {
+		connectionStr = "mysql:password@tcp(127.0.0.1:3306)/dev_db"
 	}
-	return scheme + "://" + r.Host + r.RequestURI
-}
-
-func clickHttpHandler(w http.ResponseWriter, r *http.Request) {
-	queryParams := r.URL.Query()
-	if !queryParams.Has("c") {
-		fmt.Fprint(w, "Campaign ID is missing")
+	if connectionStr == "" {
+		panic("DB_URL environment variable not set")
 	}
-	if !queryParams.Has("a") {
-		fmt.Fprint(w, "Affiliate ID is missing")
-	}
-	// connect with redis and check if campain exists
-	redis := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	defer redis.Close()
-	err := redis.Set(r.Context(), "key", "value", 5*time.Minute).Err()
+	db, err := sql.Open("mysql", connectionStr)
 	if err != nil {
-		panic(err)
+		panic(err.Error())
 	}
+	defer db.Close()
 
-	// Get campaigns details from redis and update the click count
-	// Redirect to the campaign URL
-	// Check 1 - Check if the campaign exists
-	// Check 2 - Check if the affiliate exists
-	// Check 3 - Check if the campaign is active
-	// Check 4 - Check if the affiliate is active
-	// Check 5 - Check if the campaign is active for the affiliate
-	// Check 6 - Check if the campaign is active for the affiliate for the current date
-	// Check 7 - Check if the campaign is active for the affiliate for the current date and time
-	// Check 8 - Check if the campaign is active for the affiliate for the current date and time
-	// get full path from the request
-	fmt.Println("Full path:", FullURL(r))
+	_, err = db.Exec("INSERT INTO clicks (account_id, campaign_id) VALUES ('1', '1')")
+	if err != nil {
+		panic(err.Error())
+		return
+	}
 }
