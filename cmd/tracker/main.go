@@ -11,5 +11,9 @@ func main() {
 	router := gin.Default()
 	router.Handle("GET", "/c", handler.HandlerClick)
 	router.Handle("GET", "/p", handler.HandlerConversion)
-	router.Run(":80")
+	router.Handle("GET", "/ping", handler.HandlerPing)
+	err := router.Run(":80")
+	if err != nil {
+		panic(err)
+	}
 }
