@@ -1,6 +1,7 @@
 package main
 
 import (
+	"extsalt/tracker/internal/geo"
 	"extsalt/tracker/internal/http/handler"
 
 	"github.com/gin-gonic/gin"
@@ -8,6 +9,9 @@ import (
 )
 
 func main() {
+	if err := geo.Init("GeoLite2-City.mmdb"); err != nil {
+		// Log error but continue as per plan
+	}
 	router := gin.Default()
 	router.Handle("GET", "/c", handler.HandlerClick)
 	router.Handle("GET", "/p", handler.HandlerConversion)

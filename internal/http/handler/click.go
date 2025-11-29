@@ -2,12 +2,14 @@ package handler
 
 import (
 	"encoding/json"
-	"extsalt/tracker/internal/models"
-	"extsalt/tracker/internal/pubsub"
 	"net/http"
 	"net/url"
 	"slices"
 	"time"
+
+	"extsalt/tracker/internal/geo"
+	"extsalt/tracker/internal/models"
+	"extsalt/tracker/internal/pubsub"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -51,6 +53,8 @@ func HandlerClick(c *gin.Context) {
 		status = "rejected"
 	}
 
+	country, state, city, _ := geo.Lookup(c.ClientIP())
+
 	payload := models.ClickPayload{
 		OfferID:     offerID,
 		AccountID:   c.Query("account_id"),
@@ -59,6 +63,9 @@ func HandlerClick(c *gin.Context) {
 		Timestamp:   currentTime,
 		IPAddress:   c.ClientIP(),
 		UserAgent:   c.Request.UserAgent(),
+		Country:     country,
+		State:       state,
+		City:        city,
 	}
 
 	payloadBytes, err := json.Marshal(payload)

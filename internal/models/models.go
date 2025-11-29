@@ -18,4 +18,7 @@ type ClickPayload struct {
 	Timestamp   int64  `json:"timestamp"`
 	IPAddress   string `json:"ip_address"`
 	UserAgent   string `json:"user_agent"`
+	Country     string `json:"country"`
+	State       string `json:"state"`
+	City        string `json:"city"`
 }
