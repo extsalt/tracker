@@ -2,25 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"extsalt/tracker/internal/models"
 	"extsalt/tracker/internal/pubsub"
 	"slices"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
-
-type Offer struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"name"`
-	AllowedPublishers []string `json:"allowed_publishers"`
-}
-
-type ClickPayload struct {
-	OfferID     string `json:"offer_id"`
-	AccountID   string `json:"account_id"`
-	AffiliateID string `json:"affiliate_id"`
-	Status      string `json:"status"`
-}
 
 func HandlerClick(c *gin.Context) {
 	offerID := c.Query("offer_id")
@@ -41,22 +30,24 @@ func HandlerClick(c *gin.Context) {
 		panic(err)
 	}
 
-	var offer Offer
+	var offer models.Offer
 	if err := json.Unmarshal([]byte(val), &offer); err != nil {
 		panic(err)
 	}
 
 	affiliateID := c.Query("affiliate_id")
 	status := "rejected"
-	if slices.Contains(offer.AllowedPublishers, affiliateID) {
+	currentTime := time.Now().Unix()
+	if slices.Contains(offer.AllowedPublishers, affiliateID) && currentTime >= offer.StartTime && currentTime <= offer.EndTime {
 		status = "approved"
 	}
 
-	payload := ClickPayload{
+	payload := models.ClickPayload{
 		OfferID:     offerID,
 		AccountID:   c.Query("account_id"),
 		AffiliateID: affiliateID,
 		Status:      status,
+		Timestamp:   currentTime,
 	}
 
 	payloadBytes, err := json.Marshal(payload)
