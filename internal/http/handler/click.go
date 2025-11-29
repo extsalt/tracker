@@ -36,10 +36,13 @@ func HandlerClick(c *gin.Context) {
 	}
 
 	affiliateID := c.Query("affiliate_id")
-	status := "rejected"
+	status := "approved"
 	currentTime := time.Now().Unix()
-	if slices.Contains(offer.AllowedPublishers, affiliateID) && currentTime >= offer.StartTime && currentTime <= offer.EndTime {
-		status = "approved"
+	if !slices.Contains(offer.AllowedPublishers, affiliateID) {
+		status = "rejected"
+	}
+	if currentTime < offer.StartTime || currentTime > offer.EndTime {
+		status = "rejected"
 	}
 
 	payload := models.ClickPayload{
