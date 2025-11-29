@@ -8,7 +8,7 @@ import (
 func DBConnect() (*sql.DB, error) {
 	connectionStr := os.Getenv("DB_URL")
 	if connectionStr == "" {
-		connectionStr = "mysql:password@tcp(127.0.0.1:3306)/dev_db"
+		connectionStr = "mysql:password@tcp(127.0.0.1:3306)/dev_db?charset=utf8mb4&parseTime=True&loc=Local"
 	}
 	if connectionStr == "" {
 		panic("DB_URL environment variable not set")
@@ -17,6 +17,5 @@ func DBConnect() (*sql.DB, error) {
 	if err != nil {
 		panic(err.Error())
 	}
-	defer db.Close()
 	return db, err
 }

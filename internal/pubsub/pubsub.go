@@ -5,10 +5,12 @@ import (
 
 	"github.com/redis/go-redis/v9"
 )
-func PubSubConnect() (*redis.Client, error) {
+
+// NewClient creates a new Redis client connection
+func NewClient() (*redis.Client, error) {
 	option := redis.Options{
 		Addr:     "localhost:6379",
-		Password: "", 
+		Password: "",
 		DB:       0,
 	}
 	redisClient := redis.NewClient(&option)
