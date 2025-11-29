@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"extsalt/tracker/internal/models"
 	"extsalt/tracker/internal/pubsub"
+	"net/http"
+	"net/url"
 	"slices"
 	"time"
 
@@ -15,6 +17,11 @@ func HandlerClick(c *gin.Context) {
 	offerID := c.Query("offer_id")
 	if offerID == "" {
 		c.JSON(400, gin.H{"error": "offer_id is required"})
+		return
+	}
+	affiliateID := c.Query("affiliate_id")
+	if affiliateID == "" {
+		c.JSON(400, gin.H{"error": "affiliate_id is required"})
 		return
 	}
 	redisClient, err := pubsub.NewClient()
@@ -35,7 +42,6 @@ func HandlerClick(c *gin.Context) {
 		panic(err)
 	}
 
-	affiliateID := c.Query("affiliate_id")
 	status := "approved"
 	currentTime := time.Now().Unix()
 	if !slices.Contains(offer.AllowedPublishers, affiliateID) {
@@ -51,6 +57,8 @@ func HandlerClick(c *gin.Context) {
 		AffiliateID: affiliateID,
 		Status:      status,
 		Timestamp:   currentTime,
+		IPAddress:   c.ClientIP(),
+		UserAgent:   c.Request.UserAgent(),
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -59,4 +67,13 @@ func HandlerClick(c *gin.Context) {
 	}
 
 	redisClient.Publish(c, "click", payloadBytes)
+
+	targetURL := offer.OfferURL
+	if status == "rejected" && offer.FallbackURL != "" {
+		if _, err := url.ParseRequestURI(offer.FallbackURL); err == nil {
+			targetURL = offer.FallbackURL
+		}
+	}
+
+	c.Redirect(http.StatusFound, targetURL)
 }
