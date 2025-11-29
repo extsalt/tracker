@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"extsalt/tracker/internal/db"
+	"extsalt/tracker/internal/models"
 	"extsalt/tracker/internal/pubsub"
 	"fmt"
-	"time"
+	"log"
 )
 
 func main() {
@@ -15,7 +17,25 @@ func main() {
 	}
 
 	// Ensure DB connection is established
-	_, err = db.DBConnect()
+	database, err := db.DBConnect()
+	if err != nil {
+		panic(err)
+	}
+
+	// Create table if not exists
+	_, err = database.Exec(`CREATE TABLE IF NOT EXISTS clicks (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		offer_id VARCHAR(255),
+		account_id VARCHAR(255),
+		affiliate_id VARCHAR(255),
+		status VARCHAR(50),
+		timestamp BIGINT,
+		ip_address VARCHAR(45),
+		user_agent TEXT,
+		country VARCHAR(2),
+		state VARCHAR(10),
+		city VARCHAR(255)
+	)`)
 	if err != nil {
 		panic(err)
 	}
@@ -37,9 +57,22 @@ func main() {
 			defer func() { <-tokens }() // Release token
 
 			fmt.Println("Processing job:", payload)
-			// Simulate work
-			time.Sleep(100 * time.Millisecond)
-			// Future: Add actual DB processing logic here
+
+			var click models.ClickPayload
+			if err := json.Unmarshal([]byte(payload), &click); err != nil {
+				log.Printf("Error unmarshaling payload: %v", err)
+				return
+			}
+
+			_, err := database.Exec(`INSERT INTO clicks 
+				(offer_id, account_id, affiliate_id, status, timestamp, ip_address, user_agent, country, state, city) 
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				click.OfferID, click.AccountID, click.AffiliateID, click.Status, click.Timestamp,
+				click.IPAddress, click.UserAgent, click.Country, click.State, click.City)
+
+			if err != nil {
+				log.Printf("Error inserting click: %v", err)
+			}
 		}(msg.Payload)
 	}
 }
