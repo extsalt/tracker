@@ -2,12 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"extsalt/tracker/internal/db"
-	"extsalt/tracker/internal/models"
 	"extsalt/tracker/internal/pubsub"
-	"fmt"
-	"log"
+	"extsalt/tracker/internal/worker"
 )
 
 func main() {
@@ -15,8 +12,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	// Ensure DB connection is established
 	database, err := db.DBConnect()
 	if err != nil {
 		panic(err)
@@ -50,29 +45,13 @@ func main() {
 
 	// Token bucket for concurrency control (e.g., 10 concurrent workers)
 	tokens := make(chan struct{}, 10)
+	clickProcessor := worker.NewClickProcessor(database)
 
 	for msg := range channel {
 		tokens <- struct{}{} // Acquire token
 		go func(payload string) {
 			defer func() { <-tokens }() // Release token
-
-			fmt.Println("Processing job:", payload)
-
-			var click models.ClickPayload
-			if err := json.Unmarshal([]byte(payload), &click); err != nil {
-				log.Printf("Error unmarshaling payload: %v", err)
-				return
-			}
-
-			_, err := database.Exec(`INSERT INTO clicks 
-				(offer_id, account_id, affiliate_id, status, timestamp, ip_address, user_agent, country, state, city) 
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				click.OfferID, click.AccountID, click.AffiliateID, click.Status, click.Timestamp,
-				click.IPAddress, click.UserAgent, click.Country, click.State, click.City)
-
-			if err != nil {
-				log.Printf("Error inserting click: %v", err)
-			}
+			clickProcessor.Process(payload)
 		}(msg.Payload)
 	}
 }
