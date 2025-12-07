@@ -1,13 +1,21 @@
 package models
 
 type Offer struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"name"`
-	AllowedPublishers []string `json:"allowed_publishers"`
-	StartTime         int64    `json:"start_time"`
-	EndTime           int64    `json:"end_time"`
-	OfferURL          string   `json:"offer_url"`
-	FallbackURL       string   `json:"fallback_url"`
+	ID                string                       `json:"id"`
+	Name              string                       `json:"name"`
+	AllowedPublishers []string                     `json:"allowed_publishers"`
+	AllowedUserAgents []string                     `json:"allowed_user_agents"`
+	StartTime         int64                        `json:"start_time"`
+	EndTime           int64                        `json:"end_time"`
+	OfferURL          string                       `json:"offer_url"`
+	FallbackURL       string                       `json:"fallback_url"`
+	EnableFallback    bool                         `json:"enable_fallback"`
+	AffiliateSettings map[string]AffiliateOverride `json:"affiliate_settings"`
+}
+
+type AffiliateOverride struct {
+	FallbackURL    string `json:"fallback_url"`
+	EnableFallback bool   `json:"enable_fallback"`
 }
 
 type ClickPayload struct {
@@ -21,4 +29,5 @@ type ClickPayload struct {
 	Country     string `json:"country"`
 	State       string `json:"state"`
 	City        string `json:"city"`
+	IsFallback  bool   `json:"is_fallback"`
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"extsalt/tracker/internal/geo"
@@ -26,6 +27,9 @@ func HandlerClick(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "affiliate_id is required"})
 		return
 	}
+
+	ua := c.Request.UserAgent()
+
 	redisClient, err := pubsub.NewClient()
 	if err != nil {
 		panic(err)
@@ -49,8 +53,44 @@ func HandlerClick(c *gin.Context) {
 	if !slices.Contains(offer.AllowedPublishers, affiliateID) {
 		status = "rejected"
 	}
+
+	if len(offer.AllowedUserAgents) > 0 {
+		uaAllowed := false
+		for _, allowed := range offer.AllowedUserAgents {
+			if strings.Contains(ua, allowed) {
+				uaAllowed = true
+				break
+			}
+		}
+		if !uaAllowed {
+			status = "rejected"
+		}
+	}
 	if currentTime < offer.StartTime || currentTime > offer.EndTime {
 		status = "rejected"
+	}
+
+	targetURL := offer.OfferURL
+	var fallbackURL string
+	isFallback := false
+
+	// Check for Affiliate Priority Fallback
+	if setting, exists := offer.AffiliateSettings[affiliateID]; exists {
+		if setting.EnableFallback && setting.FallbackURL != "" {
+			fallbackURL = setting.FallbackURL
+		}
+	}
+
+	// If no Affiliate Fallback, check for Offer Fallback
+	if fallbackURL == "" && offer.EnableFallback && offer.FallbackURL != "" {
+		fallbackURL = offer.FallbackURL
+	}
+
+	if status == "rejected" && fallbackURL != "" {
+		if _, err := url.ParseRequestURI(fallbackURL); err == nil {
+			targetURL = fallbackURL
+			isFallback = true
+		}
 	}
 
 	country, state, city, _ := geo.Lookup(c.ClientIP())
@@ -62,10 +102,11 @@ func HandlerClick(c *gin.Context) {
 		Status:      status,
 		Timestamp:   currentTime,
 		IPAddress:   c.ClientIP(),
-		UserAgent:   c.Request.UserAgent(),
+		UserAgent:   ua,
 		Country:     country,
 		State:       state,
 		City:        city,
+		IsFallback:  isFallback,
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -74,13 +115,6 @@ func HandlerClick(c *gin.Context) {
 	}
 
 	redisClient.Publish(c, "click", payloadBytes)
-
-	targetURL := offer.OfferURL
-	if status == "rejected" && offer.FallbackURL != "" {
-		if _, err := url.ParseRequestURI(offer.FallbackURL); err == nil {
-			targetURL = offer.FallbackURL
-		}
-	}
 
 	c.Redirect(http.StatusFound, targetURL)
 }
